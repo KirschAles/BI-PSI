@@ -112,6 +112,50 @@ def authenticate(conn: Connection) -> bool:
     return True
 
 
+class Vector:
+    def __init__(self, x: int, y: int):
+        self._x = x
+        self._y = y
+
+    @property
+    def x(self) -> int:
+        return self._x
+
+    @property
+    def y(self) -> int:
+        return self._y
+
+    def __add__(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __mul__(self, k: int):
+        return Vector(self.x * k, self.y * k)
+
+    def left(self):
+        if self.x == 1:
+            new_x = 0
+            new_y = -1
+        elif self.x == -1:
+            new_x = 0
+            new_y = 1
+        elif self.y == 1:
+            new_x = 1
+            new_y = 0
+        else:
+            new_x = -1
+            new_y = 0
+        return Vector(new_x, new_y)
+
+    def right(self):
+        return self.left() * (-1)
+
+    def __eq__(self, other) -> bool:
+        return self.x == other.x and self.y == other.y
+
+    def dist(self, other) -> int:
+        return abs(self.x - other.x) + abs(self.y + other.y)
+
+
 def manage_connection(conn: Connection):
     if not authenticate(conn):
         return
