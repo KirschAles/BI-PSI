@@ -50,7 +50,7 @@ def calculate_server_key(robot_hash: int, robot_id: int):
 
 
 def verify_client_key(client_key: int, robot_id: int, robot_hash: int) -> bool:
-    return (client_key - KEYS[robot_id].server) % KEY_CEILING == robot_hash
+    return (client_key - KEYS[robot_id].client) % KEY_CEILING == robot_hash
 
 
 class Connection:
