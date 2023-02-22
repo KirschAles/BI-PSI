@@ -4,6 +4,7 @@ import threading
 ENCODING = 'utf8'
 
 MAX_MESSAGE_LENGTH = 20
+MAX_SECRET_MESSAGE_LENGTH = 100
 MSG_DELIMITER = bytes('\a\b', encoding='utf-8')
 
 PORT = 3999
@@ -58,11 +59,11 @@ class Connection:
         self.sock = sock
         self.remainder = b''
 
-    def recv(self) -> bytes:
+    def recv(self, max_len=MAX_MESSAGE_LENGTH) -> bytes:
         msg = self.remainder
         bytes_read = len(msg)
-        while msg.find(MSG_DELIMITER) == -1 and bytes_read < MAX_MESSAGE_LENGTH:
-            msg += self.sock.recv(MAX_MESSAGE_LENGTH - bytes_read)
+        while msg.find(MSG_DELIMITER) == -1 and bytes_read < max_len:
+            msg += self.sock.recv(max_len - bytes_read)
             bytes_read = len(msg)
 
         if msg.find(MSG_DELIMITER) == -1:
@@ -250,7 +251,7 @@ def manage_connection(conn: Connection):
         return
     move_to_goal(conn)
     conn.send(SERVER_PICK_UP)
-    conn.recv()
+    conn.recv(MAX_SECRET_MESSAGE_LENGTH)
     conn.send(SERVER_LOGOUT)
 
 
