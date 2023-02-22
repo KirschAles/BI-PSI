@@ -151,6 +151,9 @@ class Vector:
             new_y = 0
         return Vector(new_x, new_y)
 
+    def __hash__(self):
+        return (self.x, self.y).__hash__()
+
     def right(self):
         return self.left() * (-1)
 
@@ -169,6 +172,46 @@ class Vector:
     def __str__(self) -> str:
         return str(self.x) + ' ' + str(self.y)
 
+    def neighbours(self) -> list:
+        neighbours = []
+        vector = Vector(1, 0)
+        for i in range(3):
+            neighbours.append(self + vector)
+            vector = vector.right()
+        neighbours.append(self + vector)
+        return neighbours
+
+
+def reconstruct_path(parent: dict, current_pos: Vector):
+    path = []
+    pos = current_pos
+
+    while not (parent[pos] is None):
+        path.insert(0, pos)
+        pos = parent[pos]
+    return path
+
+
+def bfs(position: Vector, collisions: list, goal: Vector) -> list:
+    open = [position]
+    closed = set()
+    parent = {}
+    parent[position] = None
+
+    while len(open) != 0:
+        pos = open.pop(0)
+        if pos == goal:
+            return reconstruct_path(parent, pos)
+
+        for neigbour in pos.neighbours():
+            if neigbour in closed or neigbour in collisions:
+                continue
+            else:
+                open.append(neigbour)
+                parent[neigbour] = pos
+        closed.add(pos)
+    raise ValueError('no way by bfs')
+
 
 class Robot:
     goal = Vector(0, 0)
@@ -176,6 +219,7 @@ class Robot:
     def __init__(self, position: Vector, direction: Vector):
         self.position = position
         self.direction = direction
+        self.collision_points = []
 
     def is_at_goal(self):
         return self.position == self.goal
@@ -190,13 +234,27 @@ class Robot:
         min_distance = self.position.dist(self.goal)
         direction = self.direction
         for i in range(4):
-            if (direction + self.position).dist(self.goal) < min_distance:
+            if (direction + self.position).dist(self.goal) < min_distance and self.is_walkable(direction+self.position):
                 return i
             direction = direction.right()
         raise ValueError("Impossible situation")
 
     def move(self):
         self.position = self.position + self.direction
+
+    def add_collision(self, collision: Vector):
+        self.collision_points.append(collision)
+
+    def is_walkable(self, pos: Vector):
+        return not (pos in self.collision_points)
+
+    def left_turns_to(self, pos: Vector) -> int:
+        direction = self.direction
+        for i in range(4):
+            if self.position + direction == pos:
+                return i
+            direction = direction.left()
+        raise ValueError('Not neighbour.')
 
 
 def turn_right(conn: Connection):
@@ -244,27 +302,48 @@ def turn(robot: Robot, conn: Connection):
 def move_with_turning(conn: Connection, robot: Robot):
     position = move(conn)
     while position == robot.position:
+        robot.add_collision(position + robot.direction)
         pos_left = robot.position + robot.direction.left()
         pos_right = robot.position + robot.direction.right()
-        if pos_left.dist(robot.goal) < pos_right.dist(robot.goal):
+        if pos_left.dist(robot.goal) < pos_right.dist(robot.goal) and robot.is_walkable(pos_left):
             turn_left(conn)
             robot.turn_left()
-        else:
+        elif robot.is_walkable(pos_right):
             turn_right(conn)
             robot.turn_right()
+        else:
+            turn_right(conn)
+            turn_right(conn)
+            robot.turn_right()
+            robot.turn_right()
+
         position = move(conn)
         robot.move()
     return position
 
 
+def get_to_goal(conn: Connection, robot: Robot) -> bool:
+    path = bfs(robot.position, robot.collision_points, robot.goal)
+    print('bfs done')
+    for pos in path:
+        turns = robot.left_turns_to(pos)
+        for i in range(turns):
+            turn_left(conn)
+            robot.turn_left()
+        new_pos = move(conn)
+        if new_pos == pos:
+            robot.add_collision(new_pos)
+            return False
+        robot.move()
+    return True
+
+
 def move_to_goal(conn: Connection):
     position, direction = find_position_info(conn)
     robot = Robot(position, direction)
-    while not robot.is_at_goal():
-        turn(robot, conn)
-        position = move_with_turning(conn, robot)
-        direction = position - robot.position
-        robot = Robot(position, direction)
+
+    while not get_to_goal(conn, robot):
+        pass
 
 
 def manage_connection(conn: Connection):
