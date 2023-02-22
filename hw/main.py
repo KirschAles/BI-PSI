@@ -195,9 +195,17 @@ class Robot:
             direction = direction.right()
         raise ValueError("Impossible situation")
 
+    def move(self):
+        self.position = self.position + self.direction
+
 
 def turn_right(conn: Connection):
     conn.send(SERVER_TURN_RIGHT)
+    conn.recv()
+
+
+def turn_left(conn: Connection):
+    conn.send(SERVER_TURN_LEFT)
     conn.recv()
 
 
@@ -229,13 +237,23 @@ def turn_right_n_times(n: int, conn: Connection):
 def turn(robot: Robot, conn: Connection):
     turns = robot.optimal_right_turns()
     turn_right_n_times(turns, conn)
+    for i in range(turns):
+        robot.turn_right()
 
 
 def move_with_turning(conn: Connection, robot: Robot):
     position = move(conn)
     while position == robot.position:
-        turn_right(conn)
+        pos_left = robot.position + robot.direction.left()
+        pos_right = robot.position + robot.direction.right()
+        if pos_left.dist(robot.goal) < pos_right.dist(robot.goal):
+            turn_left(conn)
+            robot.turn_left()
+        else:
+            turn_right(conn)
+            robot.turn_right()
         position = move(conn)
+        robot.move()
     return position
 
 
