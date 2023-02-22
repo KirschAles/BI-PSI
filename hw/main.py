@@ -25,6 +25,9 @@ SERVER_LOGIC_ERROR = '302 LOGIC ERROR\a\b'
 SERVER_KEY_OUT_OF_RANGE_ERROR = '303 KEY OUT OF RANGE\a\b'
 
 
+TIMEOUT = 1
+
+
 class Key:
     def __init__(self, server, client):
         self.client = client
@@ -57,6 +60,7 @@ def verify_client_key(client_key: int, robot_id: int, robot_hash: int) -> bool:
 class Connection:
     def __init__(self, sock: socket.socket):
         self.sock = sock
+        self.sock.settimeout(TIMEOUT)
         self.remainder = b''
 
     def recv(self, max_len=MAX_MESSAGE_LENGTH) -> bytes:
