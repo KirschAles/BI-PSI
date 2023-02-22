@@ -139,15 +139,15 @@ class Vector:
     def left(self):
         if self.x == 1:
             new_x = 0
-            new_y = -1
+            new_y = 1
         elif self.x == -1:
             new_x = 0
-            new_y = 1
+            new_y = -1
         elif self.y == 1:
-            new_x = 1
+            new_x = -1
             new_y = 0
         else:
-            new_x = -1
+            new_x = 1
             new_y = 0
         return Vector(new_x, new_y)
 
