@@ -264,7 +264,12 @@ class ConnectionThread(threading.Thread):
         self.conn = conn
 
     def run(self):
-        manage_connection(self.conn)
+        try:
+            manage_connection(self.conn)
+        except socket.timeout:
+            pass
+        except ValueError:
+            pass
         self.conn.close()
 
 
