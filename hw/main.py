@@ -239,7 +239,6 @@ def move_to_goal(conn: Connection):
     position, direction = find_position_info(conn)
     robot = Robot(position, direction)
     while not robot.is_at_goal():
-        print(str(position))
         turn(robot, conn)
         position = move_with_turning(conn, robot)
         direction = position - robot.position
