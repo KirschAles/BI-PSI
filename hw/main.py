@@ -155,10 +155,103 @@ class Vector:
     def dist(self, other) -> int:
         return abs(self.x - other.x) + abs(self.y + other.y)
 
+    def __neg__(self):
+        return Vector(-self.x, -self.y)
+
+    def __sub__(self, other):
+        return Vector(self.x - other.x, self.y - other.y)
+
+    def __str__(self) -> str:
+        return str(self.x) + ' ' + str(self.y)
+
+
+class Robot:
+    goal = Vector(0, 0)
+
+    def __init__(self, position: Vector, direction: Vector):
+        self.position = position
+        self.direction = direction
+
+    def is_at_goal(self):
+        return self.position == self.goal
+
+    def turn_left(self):
+        self.direction = self.direction.left()
+
+    def turn_right(self):
+        self.direction = self.direction.right()
+
+    def optimal_right_turns(self) -> int:
+        min_distance = self.position.dist(self.goal)
+        direction = self.direction
+        for i in range(4):
+            if (direction + self.position).dist(self.goal) < min_distance:
+                return i
+            direction = direction.right()
+        raise ValueError("Impossible situation")
+
+
+def turn_right(conn: Connection):
+    conn.send(SERVER_TURN_RIGHT)
+    conn.recv()
+
+
+def move(conn: Connection) -> Vector:
+    # moves the robot and returns the new position
+    conn.send(SERVER_MOVE)
+    position_str = to_str(conn.recv())
+    position_info = position_str.split(' ')
+    x, y = int(position_info[1]), int(position_info[2])
+    return Vector(x, y)
+
+
+def find_position_info(conn: Connection):
+    position1 = move(conn)
+    position2 = move(conn)
+    while position2 == position1:
+        turn_right(conn)
+        position2 = move(conn)
+
+    direction = position2 - position1
+    return position2, direction
+
+
+def turn_right_n_times(n: int, conn: Connection):
+    for i in range(n):
+        turn_right(conn)
+
+
+def turn(robot: Robot, conn: Connection):
+    turns = robot.optimal_right_turns()
+    turn_right_n_times(turns, conn)
+
+
+def move_with_turning(conn: Connection, robot: Robot):
+    position = move(conn)
+    while position == robot.position:
+        turn_right(conn)
+        position = move(conn)
+    return position
+
+
+def move_to_goal(conn: Connection):
+    position, direction = find_position_info(conn)
+    robot = Robot(position, direction)
+    while not robot.is_at_goal():
+        print(str(position))
+        turn(robot, conn)
+        position = move_with_turning(conn, robot)
+        direction = position - robot.position
+        robot = Robot(position, direction)
+
 
 def manage_connection(conn: Connection):
     if not authenticate(conn):
         return
+    move_to_goal(conn)
+    conn.send(SERVER_PICK_UP)
+    conn.recv()
+    conn.send(SERVER_LOGOUT)
 
 
 class ConnectionThread(threading.Thread):
