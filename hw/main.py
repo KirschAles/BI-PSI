@@ -256,6 +256,16 @@ class Robot:
             direction = direction.left()
         raise ValueError('Not neighbour.')
 
+    def best_next(self):
+        distance = self.position.dist(self.goal) + 10
+        best_pos = None
+        for pos in self.position.neighbours():
+            if pos.dist(self.goal) < distance and not (pos in self.collision_points):
+                best_pos = pos
+                distance = pos.dist(self.goal)
+        return best_pos
+
+
 
 def turn_right(conn: Connection):
     conn.send(SERVER_TURN_RIGHT)
@@ -323,18 +333,17 @@ def move_with_turning(conn: Connection, robot: Robot):
 
 
 def get_to_goal(conn: Connection, robot: Robot) -> bool:
-    path = bfs(robot.position, robot.collision_points, robot.goal)
-    print('bfs done')
-    for pos in path:
-        turns = robot.left_turns_to(pos)
+    while robot.position != robot.goal:
+        next_pos = robot.best_next()
+        turns = robot.left_turns_to(next_pos)
         for i in range(turns):
             turn_left(conn)
             robot.turn_left()
         new_pos = move(conn)
-        if new_pos == pos:
-            robot.add_collision(new_pos)
-            return False
-        robot.move()
+        robot.position = new_pos
+        if new_pos != next_pos:
+            robot.add_collision(next_pos)
+
     return True
 
 
