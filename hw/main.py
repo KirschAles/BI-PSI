@@ -192,7 +192,7 @@ def reconstruct_path(parent: dict, current_pos: Vector):
     return path
 
 
-def bfs(position: Vector, collisions: list, goal: Vector) -> list:
+def bfs(position: Vector, collisions: set, goal: Vector) -> list:
     open = [position]
     closed = set()
     parent = {}
@@ -219,7 +219,7 @@ class Robot:
     def __init__(self, position: Vector, direction: Vector):
         self.position = position
         self.direction = direction
-        self.collision_points = []
+        self.collision_points = set()
 
     def is_at_goal(self):
         return self.position == self.goal
@@ -243,7 +243,7 @@ class Robot:
         self.position = self.position + self.direction
 
     def add_collision(self, collision: Vector):
-        self.collision_points.append(collision)
+        self.collision_points.add(collision)
 
     def is_walkable(self, pos: Vector):
         return not (pos in self.collision_points)
