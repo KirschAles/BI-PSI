@@ -182,37 +182,6 @@ class Vector:
         return neighbours
 
 
-def reconstruct_path(parent: dict, current_pos: Vector):
-    path = []
-    pos = current_pos
-
-    while not (parent[pos] is None):
-        path.insert(0, pos)
-        pos = parent[pos]
-    return path
-
-
-def bfs(position: Vector, collisions: set, goal: Vector) -> list:
-    open = [position]
-    closed = set()
-    parent = {}
-    parent[position] = None
-
-    while len(open) != 0:
-        pos = open.pop(0)
-        if pos == goal:
-            return reconstruct_path(parent, pos)
-
-        for neigbour in pos.neighbours():
-            if neigbour in closed or neigbour in collisions:
-                continue
-            else:
-                open.append(neigbour)
-                parent[neigbour] = pos
-        closed.add(pos)
-    raise ValueError('no way by bfs')
-
-
 class Robot:
     goal = Vector(0, 0)
 
@@ -230,23 +199,11 @@ class Robot:
     def turn_right(self):
         self.direction = self.direction.right()
 
-    def optimal_right_turns(self) -> int:
-        min_distance = self.position.dist(self.goal)
-        direction = self.direction
-        for i in range(4):
-            if (direction + self.position).dist(self.goal) < min_distance and self.is_walkable(direction+self.position):
-                return i
-            direction = direction.right()
-        raise ValueError("Impossible situation")
-
     def move(self):
         self.position = self.position + self.direction
 
     def add_collision(self, collision: Vector):
         self.collision_points.add(collision)
-
-    def is_walkable(self, pos: Vector):
-        return not (pos in self.collision_points)
 
     def left_turns_to(self, pos: Vector) -> int:
         direction = self.direction
@@ -264,12 +221,6 @@ class Robot:
                 best_pos = pos
                 distance = pos.dist(self.goal)
         return best_pos
-
-
-
-def turn_right(conn: Connection):
-    conn.send(SERVER_TURN_RIGHT)
-    conn.recv()
 
 
 def turn_left(conn: Connection):
@@ -290,46 +241,11 @@ def find_position_info(conn: Connection):
     position1 = move(conn)
     position2 = move(conn)
     while position2 == position1:
-        turn_right(conn)
+        turn_left(conn)
         position2 = move(conn)
 
     direction = position2 - position1
     return position2, direction
-
-
-def turn_right_n_times(n: int, conn: Connection):
-    for i in range(n):
-        turn_right(conn)
-
-
-def turn(robot: Robot, conn: Connection):
-    turns = robot.optimal_right_turns()
-    turn_right_n_times(turns, conn)
-    for i in range(turns):
-        robot.turn_right()
-
-
-def move_with_turning(conn: Connection, robot: Robot):
-    position = move(conn)
-    while position == robot.position:
-        robot.add_collision(position + robot.direction)
-        pos_left = robot.position + robot.direction.left()
-        pos_right = robot.position + robot.direction.right()
-        if pos_left.dist(robot.goal) < pos_right.dist(robot.goal) and robot.is_walkable(pos_left):
-            turn_left(conn)
-            robot.turn_left()
-        elif robot.is_walkable(pos_right):
-            turn_right(conn)
-            robot.turn_right()
-        else:
-            turn_right(conn)
-            turn_right(conn)
-            robot.turn_right()
-            robot.turn_right()
-
-        position = move(conn)
-        robot.move()
-    return position
 
 
 def get_to_goal(conn: Connection, robot: Robot) -> bool:
