@@ -161,7 +161,7 @@ class Vector:
         return self.x == other.x and self.y == other.y
 
     def dist(self, other) -> int:
-        return abs(self.x - other.x) + abs(self.y + other.y)
+        return abs(self.x - other.x) + abs(self.y - other.y)
 
     def __neg__(self):
         return Vector(-self.x, -self.y)
