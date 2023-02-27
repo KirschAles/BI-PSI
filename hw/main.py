@@ -107,7 +107,10 @@ def authenticate(conn: Connection) -> bool:
     server_key = calculate_server_key(robot_hash, robot_id)
     conn.send(str(server_key) + to_str(MSG_DELIMITER))
 
-    client_key = int(to_str(conn.recv()))
+    client_key_string = to_str(conn.recv())
+    if not client_key_string.isnumeric():
+        raise ValueError('Client key not numeric.')
+    client_key = int(client_key_string)
 
     if not verify_client_key(client_key, robot_id, robot_hash):
         conn.send(SERVER_LOGIN_FAILED)
@@ -297,7 +300,7 @@ class ConnectionThread(threading.Thread):
         except socket.timeout:
             pass
         except ValueError:
-            pass
+            self.conn.send(SERVER_SYNTAX_ERROR)
         self.conn.close()
 
 
