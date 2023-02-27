@@ -215,11 +215,11 @@ class Robot:
             direction = direction.left()
         raise ValueError('Not neighbour.')
 
-    def best_next(self):
+    def best_next(self, prev_pos: Vector):
         distance = self.position.dist(self.goal) + 10
         best_pos = None
         for pos in self.position.neighbours():
-            if pos.dist(self.goal) < distance and not (pos in self.collision_points):
+            if pos.dist(self.goal) < distance and not (pos in self.collision_points) and pos != prev_pos:
                 best_pos = pos
                 distance = pos.dist(self.goal)
         return best_pos
@@ -251,8 +251,10 @@ def find_position_info(conn: Connection):
 
 
 def get_to_goal(conn: Connection, robot: Robot) -> bool:
+    prev_pos = None
     while robot.position != robot.goal:
-        next_pos = robot.best_next()
+        current_pos = robot.position
+        next_pos = robot.best_next(prev_pos)
         turns = robot.left_turns_to(next_pos)
         for i in range(turns):
             turn_left(conn)
@@ -261,6 +263,8 @@ def get_to_goal(conn: Connection, robot: Robot) -> bool:
         robot.position = new_pos
         if new_pos != next_pos:
             robot.add_collision(next_pos)
+        else:
+            prev_pos = current_pos
 
     return True
 
