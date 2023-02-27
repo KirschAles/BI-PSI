@@ -241,6 +241,8 @@ def move(conn: Connection) -> Vector:
     conn.send(SERVER_MOVE)
     position_str = to_str(conn.recv())
     position_info = position_str.split(' ')
+    if len(position_info) != 3:
+        raise ValueError('Wrong MOVE command')
     x, y = int(position_info[1]), int(position_info[2])
     return Vector(x, y)
 
