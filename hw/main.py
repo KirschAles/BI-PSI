@@ -114,7 +114,7 @@ def recv_with_recharge(conn: Connection, max_len: int) -> bytes:
         conn.sock.settimeout(TIMEOUT_RECHARGING)
         recharging = conn.recv(MaxLength.CLIENT_FULL_POWER)
         if to_str(recharging) != CLIENT_FULL_POWER:
-            raise ValueError("Robot couldn't recharge.")
+            raise ArithmeticError("Robot couldn't recharge.")
         conn.sock.settimeout(TIMEOUT)
         msg = recv_with_recharge(conn, max_len)
     return msg
@@ -336,6 +336,8 @@ class ConnectionThread(threading.Thread):
             pass
         except ValueError:
             self.conn.send(SERVER_SYNTAX_ERROR)
+        except ArithmeticError:
+            self.conn.send(SERVER_LOGIC_ERROR)
         self.conn.close()
 
 
