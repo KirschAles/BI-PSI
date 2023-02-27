@@ -158,6 +158,8 @@ class Vector:
         return self.left() * (-1)
 
     def __eq__(self, other) -> bool:
+        if not isinstance(other, Vector):
+            return False
         return self.x == other.x and self.y == other.y
 
     def dist(self, other) -> int:
