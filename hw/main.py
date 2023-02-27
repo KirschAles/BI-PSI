@@ -25,6 +25,10 @@ SERVER_LOGIC_ERROR = '302 LOGIC ERROR\a\b'
 SERVER_KEY_OUT_OF_RANGE_ERROR = '303 KEY OUT OF RANGE\a\b'
 
 
+CLIENT_RECHARGING = 'RECHARGING'
+CLIENT_FULL_POWER = 'FULL POWER'
+
+
 class MaxLength:
     CLIENT_USERNAME = 20
     CLIENT_KEY_ID = 5
@@ -36,6 +40,7 @@ class MaxLength:
 
 
 TIMEOUT = 1
+TIMEOUT_RECHARGING = 5
 
 
 class Key:
@@ -81,6 +86,9 @@ class Connection:
             bytes_read = len(msg)
 
         if msg.find(MSG_DELIMITER) == -1:
+            if to_str(msg) in CLIENT_RECHARGING:
+                self.remainder = msg
+                return self.recv(MaxLength.CLIENT_RECHARGING)
             raise ValueError('Message either too long or without delimiter')
         messages = msg.split(MSG_DELIMITER)
         msg = messages[0]
@@ -100,14 +108,26 @@ class Connection:
         self.sock.close()
 
 
+def recv_with_recharge(conn: Connection, max_len: int) -> bytes:
+    msg = conn.recv(max_len)
+    if to_str(msg) == CLIENT_RECHARGING:
+        conn.sock.settimeout(TIMEOUT_RECHARGING)
+        recharging = conn.recv(MaxLength.CLIENT_FULL_POWER)
+        if to_str(recharging) != CLIENT_FULL_POWER:
+            raise ValueError("Robot couldn't recharge.")
+        conn.sock.settimeout(TIMEOUT)
+        msg = recv_with_recharge(conn, max_len)
+    return msg
+
+
 def is_robot_id_valid(robot_id, keys):
     return 0 <= robot_id < len(keys)
 
 
 def authenticate(conn: Connection) -> bool:
-    username = conn.recv(MaxLength.CLIENT_USERNAME)
+    username = recv_with_recharge(conn, MaxLength.CLIENT_USERNAME)
     conn.send(SERVER_KEY_REQUEST)
-    robot_id_str = to_str(conn.recv(MaxLength.CLIENT_KEY_ID))
+    robot_id_str = to_str(recv_with_recharge(conn, MaxLength.CLIENT_KEY_ID))
     if not robot_id_str.isnumeric():
         raise ValueError('Non numeric client id')
     robot_id = int(robot_id_str)
@@ -120,7 +140,7 @@ def authenticate(conn: Connection) -> bool:
     server_key = calculate_server_key(robot_hash, robot_id)
     conn.send(str(server_key) + to_str(MSG_DELIMITER))
 
-    client_key_string = to_str(conn.recv(MaxLength.CLIENT_CONFIRMATION))
+    client_key_string = to_str(recv_with_recharge(conn, MaxLength.CLIENT_CONFIRMATION))
     if not client_key_string.isnumeric():
         raise ValueError('Client key not numeric.')
     client_key = int(client_key_string)
@@ -243,13 +263,13 @@ class Robot:
 
 def turn_left(conn: Connection):
     conn.send(SERVER_TURN_LEFT)
-    conn.recv(MaxLength.CLIENT_OK)
+    recv_with_recharge(conn, MaxLength.CLIENT_OK)
 
 
 def move(conn: Connection) -> Vector:
     # moves the robot and returns the new position
     conn.send(SERVER_MOVE)
-    position_str = to_str(conn.recv(MaxLength.CLIENT_OK))
+    position_str = to_str(recv_with_recharge(conn, MaxLength.CLIENT_OK))
     position_info = position_str.split(' ')
     if len(position_info) != 3:
         raise ValueError('Wrong MOVE command')
@@ -300,7 +320,7 @@ def manage_connection(conn: Connection):
         return
     move_to_goal(conn)
     conn.send(SERVER_PICK_UP)
-    conn.recv(MAX_SECRET_MESSAGE_LENGTH)
+    recv_with_recharge(conn, MAX_SECRET_MESSAGE_LENGTH)
     conn.send(SERVER_LOGOUT)
 
 
