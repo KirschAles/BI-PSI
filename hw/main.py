@@ -73,7 +73,7 @@ class Connection:
         self.sock.settimeout(TIMEOUT)
         self.remainder = b''
 
-    def recv(self, max_len=MAX_MESSAGE_LENGTH) -> bytes:
+    def recv(self, max_len: int) -> bytes:
         msg = self.remainder
         bytes_read = len(msg)
         while msg.find(MSG_DELIMITER) == -1 and bytes_read < max_len:
@@ -105,9 +105,9 @@ def is_robot_id_valid(robot_id, keys):
 
 
 def authenticate(conn: Connection) -> bool:
-    username = conn.recv()
+    username = conn.recv(MaxLength.CLIENT_USERNAME)
     conn.send(SERVER_KEY_REQUEST)
-    robot_id_str = to_str(conn.recv())
+    robot_id_str = to_str(conn.recv(MaxLength.CLIENT_KEY_ID))
     if not robot_id_str.isnumeric():
         raise ValueError('Non numeric client id')
     robot_id = int(robot_id_str)
@@ -120,7 +120,7 @@ def authenticate(conn: Connection) -> bool:
     server_key = calculate_server_key(robot_hash, robot_id)
     conn.send(str(server_key) + to_str(MSG_DELIMITER))
 
-    client_key_string = to_str(conn.recv())
+    client_key_string = to_str(conn.recv(MaxLength.CLIENT_CONFIRMATION))
     if not client_key_string.isnumeric():
         raise ValueError('Client key not numeric.')
     client_key = int(client_key_string)
@@ -243,13 +243,13 @@ class Robot:
 
 def turn_left(conn: Connection):
     conn.send(SERVER_TURN_LEFT)
-    conn.recv()
+    conn.recv(MaxLength.CLIENT_OK)
 
 
 def move(conn: Connection) -> Vector:
     # moves the robot and returns the new position
     conn.send(SERVER_MOVE)
-    position_str = to_str(conn.recv())
+    position_str = to_str(conn.recv(MaxLength.CLIENT_OK))
     position_info = position_str.split(' ')
     if len(position_info) != 3:
         raise ValueError('Wrong MOVE command')
