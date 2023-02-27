@@ -97,7 +97,10 @@ def is_robot_id_valid(robot_id, keys):
 def authenticate(conn: Connection) -> bool:
     username = conn.recv()
     conn.send(SERVER_KEY_REQUEST)
-    robot_id = int(to_str(conn.recv()))
+    robot_id_str = to_str(conn.recv())
+    if not robot_id_str.isnumeric():
+        raise ValueError('Non numeric client id')
+    robot_id = int(robot_id_str)
 
     if not is_robot_id_valid(robot_id, KEYS):
         conn.send(SERVER_KEY_OUT_OF_RANGE_ERROR)
