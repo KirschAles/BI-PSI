@@ -349,7 +349,7 @@ def manage_connections():
         while True:
             conn = Connection(sock.accept()[0])
             thread = ConnectionThread(conn)
-            thread.run()
+            thread.start()
 
     except KeyboardInterrupt:
         sock.close()
