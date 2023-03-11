@@ -39,7 +39,7 @@ class MaxLength:
     CLIENT_MESSAGE = 100
 
 
-TIMEOUT = 1
+TIMEOUT = 1.3
 TIMEOUT_RECHARGING = 5
 
 
