@@ -325,34 +325,43 @@ def manage_connection(conn: Connection):
 
 
 class ConnectionThread(threading.Thread):
-    def __init__(self, conn: Connection):
+    def __init__(self, conn: Connection, i):
         super(ConnectionThread, self).__init__()
         self.conn = conn
+        self.i = i
 
     def run(self):
+        print('Thread {} starting.'.format(self.i))
         try:
             manage_connection(self.conn)
         except socket.timeout:
+            print('Thread {} timeout'.format(self.i))
             pass
         except ValueError:
+            print('Thread {} Syntax Error'.format(self.i))
             self.conn.send(SERVER_SYNTAX_ERROR)
         except ArithmeticError:
+            print('Thread {} Logic Error'.format(self.i))
             self.conn.send(SERVER_LOGIC_ERROR)
         self.conn.close()
+        print('Thread {} ending.'.format(self.i))
 
 
 def manage_connections():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
     sock.listen()
+    i = 0
     try:
         while True:
             conn = Connection(sock.accept()[0])
-            thread = ConnectionThread(conn)
+            thread = ConnectionThread(conn, i)
             thread.start()
+            i += 1
 
     except KeyboardInterrupt:
         sock.close()
+    print('Shutting down.')
 
 
 if __name__ == '__main__':
