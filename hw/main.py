@@ -349,19 +349,23 @@ class ConnectionThread(threading.Thread):
 
 def manage_connections():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(5)
     sock.bind((HOST, PORT))
     sock.listen()
     i = 0
     try:
         while True:
-            conn = Connection(sock.accept()[0])
-            thread = ConnectionThread(conn, i)
-            thread.start()
-            i += 1
-
+            try:
+                conn = Connection(sock.accept()[0])
+                thread = ConnectionThread(conn, i)
+                thread.start()
+                i += 1
+            except socket.timeout:
+                continue
     except KeyboardInterrupt:
-        sock.close()
-    print('Shutting down.')
+        print('Shutting down.')
+
+    sock.close()
 
 
 if __name__ == '__main__':
